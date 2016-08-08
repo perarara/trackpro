@@ -11,7 +11,9 @@ import spray.routing.Directives._
 import spray.routing._
 import javax.ws.rs.Path
 
-import org.trackpro.model.{Project, ProjectData, ProjectFinance, User, Map}
+import com.wordnik.swagger.annotations.{ApiResponse, _}
+
+import org.trackpro.model.{Map, Project, ProjectData, ProjectFinance, User}
 import org.trackpro.web
 import spray.http.HttpHeaders.Location
 import spray.routing.authentication.BasicAuth
@@ -25,6 +27,7 @@ class ProjectRestService(val persistence: PersistenceServices)
   extends HttpServiceActor
     with ProjectRestApiRoutes
     with UserRestServicesRoutes
+    with ApiDocsUi
     with ActorLogging {
 
 
@@ -35,12 +38,12 @@ class ProjectRestService(val persistence: PersistenceServices)
   val mapService = new MapServices(persistence)
 
   def receive = runRoute {
-    routes
+    routes ~ apiDocsUiRoutes
   }
 }
 
 
-trait ProjectRestApiRoutes extends ProjectRestServiceRoutes with UserRestServicesRoutes with ProjectDataRestServicesRoutes with ProjectFinanceServiceRoutes with MapServiceRoutes {
+trait ProjectRestApiRoutes extends ProjectRestServiceRoutes with UserRestServicesRoutes with ProjectDataRestServicesRoutes with ProjectFinanceServiceRoutes with MapServiceRoutes{
   this: HttpService =>
 
   val routes = pathPrefix("trackpro") {
@@ -49,7 +52,7 @@ trait ProjectRestApiRoutes extends ProjectRestServiceRoutes with UserRestService
 
 }
 
-
+@Api(value = "/trackpro/user", description = "")
 trait UserRestServicesRoutes {
 
   import spray.httpx.SprayJsonSupport._
@@ -65,12 +68,22 @@ trait UserRestServicesRoutes {
   def root(path: Uri.Path): Uri.Path = Uri.Path(path.toString.split("/").take(3).mkString("/"))
 
 
-  @Path("/{id}")
+  @ApiOperation(
+    value = "Find User", httpMethod = "GET",
+    produces = "application/json; charset=UTF-8",
+    response = classOf[UserResource]
+  )
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam(name = "id", value = "users id", required = true, dataType = "Long", paramType = "path")
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 404, message = "User does not exist")
+  ))
   def getUser(id: Long) = get {
 
     authenticate(BasicAuth(userService.authenticate _, realm = "Project List")) { user => {
 
-      val exsist = Await.result(userService.canManageProjects(user.id, id), 10 seconds).isEmpty
+      val exsist = Await.result(userService.getUser(id), 10 seconds).isEmpty
       authorize(!exsist) {
         complete {
           userService.getUser(id)
@@ -80,6 +93,21 @@ trait UserRestServicesRoutes {
     }
   }
 
+
+  @ApiOperation(
+    value = "Add New User", httpMethod = "POST",
+    produces = "application/json; charset=UTF-8", consumes = "application/json; charset=UTF-8",
+    response = classOf[UserResource]
+  )
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam(required = true, dataType = "org.trackpro.web.UserCreatePayload", paramType = "body")
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 201, message = "User has been created", response = classOf[UserResource]),
+    new ApiResponse(code = 401, message = "User is not authenticated"),
+    new ApiResponse(code = 403, message = "User is not authorized"),
+    new ApiResponse(code = 409, message = "User with such name already exists")
+  ))
   def createUser = post {
     requestUri { uri =>
       entity(as[UserCreatePayload]) {
@@ -111,7 +139,7 @@ trait UserRestServicesRoutes {
   }
 
 }
-
+@Api(value = "/trackpro/project", description = "")
 trait ProjectRestServiceRoutes {
 
   import org.trackpro.web.ProjectsJsonProtocol._
@@ -127,6 +155,20 @@ trait ProjectRestServiceRoutes {
 
 
   //Na osnovu ove metode kreiramo projekat
+  @ApiOperation(
+    value = "Add New Project", httpMethod = "POST",
+    produces = "application/json; charset=UTF-8", consumes = "application/json; charset=UTF-8",
+    response = classOf[ProjectResource]
+  )
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam(required = true, dataType = "org.trackpro.web.ProjectCreatePayload", paramType = "body")
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 201, message = "Project has been created", response = classOf[ProjectResource]),
+    new ApiResponse(code = 401, message = "User is not authenticated"),
+    new ApiResponse(code = 403, message = "User is not authorized"),
+    new ApiResponse(code = 409, message = "Project with such name already exists")
+  ))
   def createProject(id: Long) = post {
     authenticate(BasicAuth(userService.authenticate _, realm = "Project Catalog")) { user =>
       val exsist = Await.result(userService.getUser(user.id), 10 seconds).isEmpty
@@ -149,7 +191,16 @@ trait ProjectRestServiceRoutes {
 
 
   //Na osnovu ove metode brisemo projekat
-
+  @ApiOperation(value = "Delete Project from", httpMethod = "DELETE")
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam(name = "id", value = "Project's ID", required = true, dataType = "Long", paramType = "path")
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 204, message = "Project has been deleted"),
+    new ApiResponse(code = 401, message = "User is not authenticated"),
+    new ApiResponse(code = 403, message = "User is not authorized"),
+    new ApiResponse(code = 404, message = "Project was not found")
+  ))
   def deleteProject(id: Long) = delete {
     authenticate(BasicAuth(userService.authenticate _, realm = "Project List")) { user => {
 
@@ -168,6 +219,20 @@ trait ProjectRestServiceRoutes {
   }
 
 
+  @ApiOperation(
+    value = "Update Project", httpMethod = "PUT",
+    produces = "application/json; charset=UTF-8", consumes = "application/json; charset=UTF-8",
+    response = classOf[ProjectResource]
+  )
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam(required = true, dataType = "org.trackpro.web.ProjectUpdatePayload", paramType = "body")
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 401, message = "User is not authenticated"),
+    new ApiResponse(code = 403, message = "User is not authorized"),
+    new ApiResponse(code = 404, message = "Project does not exist"),
+    new ApiResponse(code = 409, message = "Project with such name already exists")
+  ))
   def updateProject(id: Long) = put {
     authenticate(BasicAuth(userService.authenticate _, realm = "Project Catalog")) { user =>
       val exsist = Await.result(userService.canManageProjects(user.id, id), 10 seconds).isEmpty
@@ -188,6 +253,19 @@ trait ProjectRestServiceRoutes {
     }
   }
 
+
+
+  @ApiOperation(
+    value = "Find Project in catalog", httpMethod = "GET",
+    produces = "application/json; charset=UTF-8",
+    response = classOf[ProjectResource]
+  )
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam(name = "id", value = "Projects's ID", required = true, dataType = "Long", paramType = "path")
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 404, message = "Project does not exist")
+  ))
   def getProject(id: Long) = get {
     onSuccess(projectService getProject (id)) {
       case Some((project)) =>
@@ -197,9 +275,7 @@ trait ProjectRestServiceRoutes {
       case None => complete(NotFound)
     }
   }
-
-
-  val projectRoutes = pathPrefix("project") {
+   val projectRoutes = pathPrefix("project") {
 
     pathPrefix(LongNumber) {
       // id => getUser(id)
@@ -214,7 +290,7 @@ trait ProjectRestServiceRoutes {
 
 }
 
-
+@Api(value = "/trackpro/project/{projectId}/projectdata", description = "")
 trait ProjectDataRestServicesRoutes {
 
   import org.trackpro.web.ProjectsJsonProtocol._
@@ -229,7 +305,23 @@ trait ProjectDataRestServicesRoutes {
   import spray.routing.directives._
   import scala.concurrent.duration._
 
+  @ApiOperation(
+    value = "Add New Project Data", httpMethod = "POST",
+    produces = "application/json; charset=UTF-8", consumes = "application/json; charset=UTF-8",
+    response = classOf[ProjectDataResource]
+  )
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam( name="projectID" , value = "Project's ID", required = true, dataType = "Long", paramType = "path"),
+    new ApiImplicitParam( name="id" , value = "ProjectData's ID", required = true, dataType = "Long", paramType = "path"),
+    new ApiImplicitParam(required = true, dataType = "org.trackpro.web.ProjectDataCreatePayload", paramType = "body")
 
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 201, message = "Publisher has been created", response = classOf[ProjectDataResource]),
+    new ApiResponse(code = 401, message = "User is not authenticated"),
+    new ApiResponse(code = 403, message = "User is not authorized"),
+    new ApiResponse(code = 409, message = "Publisher with such name already exists")
+  ))
   def createProjectData(projectId: Long, id: Long) = post {
     authenticate(BasicAuth(userService.authenticate _, realm = "Project Data Catalog")) { user =>
       val exsist = Await.result(userService.getUser(user.id), 10 seconds).isEmpty
@@ -250,6 +342,19 @@ trait ProjectDataRestServicesRoutes {
     }
   }
 
+
+
+  @ApiOperation(value = "Delete Project Data", httpMethod = "DELETE")
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam( name="projectID" , value = "Project's ID", required = true, dataType = "Long", paramType = "path"),
+    new ApiImplicitParam( name="id" , value = "ProjectData's ID", required = true, dataType = "Long", paramType = "path")
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 204, message = "ProjectData has been deleted"),
+    new ApiResponse(code = 401, message = "User is not authenticated"),
+    new ApiResponse(code = 403, message = "User is not authorized"),
+    new ApiResponse(code = 404, message = "ProjectData was not found")
+  ))
   def deleteProjectData(projectId: Long, id: Long) = delete {
     authenticate(BasicAuth(userService.authenticate _, realm = "Project List")) { user => {
 
@@ -267,6 +372,17 @@ trait ProjectDataRestServicesRoutes {
 
   }
 
+  @ApiOperation(
+    value = "Get all projects data", httpMethod = "GET",
+    produces = "application/json; charset=UTF-8",
+    response = classOf[ProjectDataResource], responseContainer = "List"
+  )
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam(name = "id", value = "Project's ID", required = true, dataType = "Long", paramType = "path")
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 404, message = "Publisher does not exist")
+  ))
   def getProjectsData(projectId: Long) = get {
 
     complete {
@@ -303,7 +419,7 @@ trait ProjectDataRestServicesRoutes {
   }
 }
 
-
+@Api(value = "/trackpro/project/{projectId}/projectfn", description = "")
 trait ProjectFinanceServiceRoutes {
 
   import org.trackpro.web.ProjectsJsonProtocol._
@@ -319,6 +435,23 @@ trait ProjectFinanceServiceRoutes {
   import scala.concurrent.duration._
 
 
+
+  @ApiOperation(
+    value = "Add New Project Finance", httpMethod = "POST",
+    produces = "application/json; charset=UTF-8", consumes = "application/json; charset=UTF-8",
+    response = classOf[ProjectDataResource]
+  )
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam( name="projectID" , value = "Project's ID", required = true, dataType = "Long", paramType = "path"),
+    new ApiImplicitParam( name="id" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path"),
+    new ApiImplicitParam(required = true, dataType = "org.trackpro.web.ProjectFinanceCreatePayload", paramType = "body")
+     ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 201, message = "Publisher has been created", response = classOf[ProjectFnResource]),
+    new ApiResponse(code = 401, message = "User is not authenticated"),
+    new ApiResponse(code = 403, message = "User is not authorized"),
+    new ApiResponse(code = 409, message = "Publisher with such name already exists")
+  ))
   def createProjectFn(projectId: Long, id: Long) = post {
     authenticate(BasicAuth(userService.authenticate _, realm = "Project Catalog")) { user =>
       val exsist = Await.result(userService.canManageProjects(user.id, id), 10 seconds).isEmpty
@@ -339,6 +472,18 @@ trait ProjectFinanceServiceRoutes {
     }
   }
 
+
+  @ApiOperation(value = "Delete Project Finance", httpMethod = "DELETE")
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam( name="projectID" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path"),
+    new ApiImplicitParam( name="id" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path")
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 204, message = "Publisher has been deleted"),
+    new ApiResponse(code = 401, message = "User is not authenticated"),
+    new ApiResponse(code = 403, message = "User is not authorized"),
+    new ApiResponse(code = 404, message = "Publisher was not found")
+  ))
   def deleteProjectFn(projectId: Long, id: Long) = delete {
     authenticate(BasicAuth(userService.authenticate _, realm = "Project List")) { user => {
 
@@ -356,6 +501,18 @@ trait ProjectFinanceServiceRoutes {
 
   }
 
+
+  @ApiOperation(
+    value = "Find Publisher in catalog", httpMethod = "GET",
+    produces = "application/json; charset=UTF-8",
+    response = classOf[ProjectFnResource]
+  )
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam(name = "id", value = "Project's ID", required = true, dataType = "Long", paramType = "path")
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 404, message = "Publisher does not exist")
+  ))
   def getProjectsFnData(projectId: Long) = get {
 
     complete {
@@ -369,7 +526,22 @@ trait ProjectFinanceServiceRoutes {
 
   }
 
-
+  @ApiOperation(
+    value = "Update Project", httpMethod = "PUT",
+    produces = "application/json; charset=UTF-8", consumes = "application/json; charset=UTF-8",
+    response = classOf[ProjectFnResource]
+  )
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam( name="projectID" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path"),
+    new ApiImplicitParam( name="id" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path"),
+    new ApiImplicitParam(required = true, dataType = "org.trackpro.web.ProjectFinanceCreatePayload", paramType = "body")
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 401, message = "User is not authenticated"),
+    new ApiResponse(code = 403, message = "User is not authorized"),
+    new ApiResponse(code = 404, message = "Project Fn does not exist"),
+    new ApiResponse(code = 409, message = "Project Fn with such name already exists")
+  ))
   def updateProjectFn(projectId: Long, id: Long) = put {
     authenticate(BasicAuth(userService.authenticate _, realm = "Project Catalog")) { user =>
       val exsist = Await.result(userService.canManageProjects(user.id, id), 10 seconds).isEmpty
@@ -412,7 +584,7 @@ trait ProjectFinanceServiceRoutes {
 
   }
 }
-
+@Api(value = "/trackpro/project/{projectId}/map", description = "")
 trait MapServiceRoutes {
 
   import org.trackpro.web.ProjectsJsonProtocol._
@@ -430,6 +602,22 @@ trait MapServiceRoutes {
 
 
 
+  @ApiOperation(
+    value = "Add New Map", httpMethod = "POST",
+    produces = "application/json; charset=UTF-8", consumes = "application/json; charset=UTF-8",
+    response = classOf[ProjectDataResource]
+  )
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam( name="projectID" , value = "Project's ID", required = true, dataType = "Long", paramType = "path"),
+    new ApiImplicitParam( name="id" , value = "Map's ID", required = true, dataType = "Long", paramType = "path"),
+    new ApiImplicitParam(required = true, dataType = "org.trackpro.web.MapCreatePayload", paramType = "body")
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 201, message = "Map has been created", response = classOf[ProjectFnResource]),
+    new ApiResponse(code = 401, message = "User is not authenticated"),
+    new ApiResponse(code = 403, message = "User is not authorized"),
+    new ApiResponse(code = 409, message = "Map with such name already exists")
+  ))
   def createMaps(projectId: Long, id: Long) = post {
     authenticate(BasicAuth(userService.authenticate _, realm = "Project Catalog")) { user =>
       val exsist = Await.result(userService.canManageProjects(user.id, id), 10 seconds).isEmpty
@@ -452,6 +640,20 @@ trait MapServiceRoutes {
     }
   }
 
+
+
+
+  @ApiOperation(
+    value = "Find Publisher in catalog", httpMethod = "GET",
+    produces = "application/json; charset=UTF-8",
+    response = classOf[MapResource]
+  )
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam(name = "id", value = "Project's ID", required = true, dataType = "Long", paramType = "path")
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 404, message = "Project does not exist")
+  ))
   def getMaps(projectId: Long) = get {
 
     complete {
@@ -464,6 +666,18 @@ trait MapServiceRoutes {
   }
 
 
+
+  @ApiOperation(value = "Delete Project Finance", httpMethod = "DELETE")
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam( name="projectID" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path"),
+    new ApiImplicitParam( name="id" , value = "Map's ID", required = true, dataType = "Long", paramType = "path")
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 204, message = "Publisher has been deleted"),
+    new ApiResponse(code = 401, message = "User is not authenticated"),
+    new ApiResponse(code = 403, message = "User is not authorized"),
+    new ApiResponse(code = 404, message = "Publisher was not found")
+  ))
   def deleteMaps(projectId: Long, id: Long) = delete {
     authenticate(BasicAuth(userService.authenticate _, realm = "Project List")) { user => {
 
@@ -480,6 +694,22 @@ trait MapServiceRoutes {
     }
   }
 
+  @ApiOperation(
+    value = "Update Map", httpMethod = "PUT",
+    produces = "application/json; charset=UTF-8", consumes = "application/json; charset=UTF-8",
+    response = classOf[ProjectFnResource]
+  )
+  @ApiImplicitParams(Array(
+    new ApiImplicitParam( name="projectID" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path"),
+    new ApiImplicitParam( name="id" , value = "Map's ID", required = true, dataType = "Long", paramType = "path"),
+    new ApiImplicitParam(required = true, dataType = "org.trackpro.web.MapCreatePayload", paramType = "body")
+  ))
+  @ApiResponses(Array(
+    new ApiResponse(code = 401, message = "User is not authenticated"),
+    new ApiResponse(code = 403, message = "User is not authorized"),
+    new ApiResponse(code = 404, message = "Project Fn does not exist"),
+    new ApiResponse(code = 409, message = "Project Fn with such name already exists")
+  ))
   def updateMaps(projectId: Long, id: Long) = put {
     authenticate(BasicAuth(userService.authenticate _, realm = "Project Catalog")) { user =>
       val exsist = Await.result(userService.canManageProjects(user.id, id), 10 seconds).isEmpty

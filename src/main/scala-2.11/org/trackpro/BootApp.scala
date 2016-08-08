@@ -29,8 +29,4 @@ object BootApp extends App {
   IO(Http) ! Http.Bind(listener, interface = "localhost", port = 9001)
 
 
-
-
-
-
 }
