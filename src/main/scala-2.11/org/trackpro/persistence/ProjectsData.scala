@@ -1,6 +1,7 @@
 package org.trackpro.persistence
 
 
+import com.wordnik.swagger.annotations.{ApiModel, ApiModelProperty}
 import org.trackpro.model.ProjectData
 import org.trackpro.persistence.DataType.DataType
 import slick.driver.MySQLDriver.api._
@@ -12,9 +13,10 @@ import org.trackpro.persistence.Projects._
 
 
 
-
+@ApiModel
 object DataType extends Enumeration{
 
+  @ApiModelProperty(dataType = "string", allowableValues = "overview, evaluation, brief, mvp, tech_overview, gspa, results, support, marketing,resources", value = "description", notes = "notes")
   type DataType=Value
   val Overview=Value("overview")
   val Evaluation=Value("evaluation")

@@ -28,6 +28,7 @@ class ProjectRestService(val persistence: PersistenceServices)
     with ProjectRestApiRoutes
     with UserRestServicesRoutes
     with ApiDocsUi
+    with ApiDocs
     with ActorLogging {
 
 
@@ -38,7 +39,7 @@ class ProjectRestService(val persistence: PersistenceServices)
   val mapService = new MapServices(persistence)
 
   def receive = runRoute {
-    routes ~ apiDocsUiRoutes
+    routes ~ apiDocsRoutes ~ apiDocsUiRoutes
   }
 }
 
