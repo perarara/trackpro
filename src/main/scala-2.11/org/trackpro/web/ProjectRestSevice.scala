@@ -312,7 +312,7 @@ trait ProjectDataRestServicesRoutes {
     response = classOf[ProjectDataResource]
   )
   @ApiImplicitParams(Array(
-    new ApiImplicitParam( name="projectID" , value = "Project's ID", required = true, dataType = "Long", paramType = "path"),
+    //new ApiImplicitParam( name="projectID" , value = "Project's ID", required = true, dataType = "Long", paramType = "path"),
     new ApiImplicitParam( name="id" , value = "ProjectData's ID", required = true, dataType = "Long", paramType = "path"),
     new ApiImplicitParam(required = true, dataType = "org.trackpro.web.ProjectDataCreatePayload", paramType = "body")
 
@@ -347,7 +347,7 @@ trait ProjectDataRestServicesRoutes {
 
   @ApiOperation(value = "Delete Project Data", httpMethod = "DELETE")
   @ApiImplicitParams(Array(
-    new ApiImplicitParam( name="projectID" , value = "Project's ID", required = true, dataType = "Long", paramType = "path"),
+    //new ApiImplicitParam( name="projectID" , value = "Project's ID", required = true, dataType = "Long", paramType = "path"),
     new ApiImplicitParam( name="id" , value = "ProjectData's ID", required = true, dataType = "Long", paramType = "path")
   ))
   @ApiResponses(Array(
@@ -443,7 +443,7 @@ trait ProjectFinanceServiceRoutes {
     response = classOf[ProjectDataResource]
   )
   @ApiImplicitParams(Array(
-    new ApiImplicitParam( name="projectID" , value = "Project's ID", required = true, dataType = "Long", paramType = "path"),
+    //new ApiImplicitParam( name="projectID" , value = "Project's ID", required = true, dataType = "Long", paramType = "path"),
     new ApiImplicitParam( name="id" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path"),
     new ApiImplicitParam(required = true, dataType = "org.trackpro.web.ProjectFinanceCreatePayload", paramType = "body")
      ))
@@ -476,7 +476,7 @@ trait ProjectFinanceServiceRoutes {
 
   @ApiOperation(value = "Delete Project Finance", httpMethod = "DELETE")
   @ApiImplicitParams(Array(
-    new ApiImplicitParam( name="projectID" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path"),
+    //new ApiImplicitParam( name="projectID" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path"),
     new ApiImplicitParam( name="id" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path")
   ))
   @ApiResponses(Array(
@@ -533,7 +533,7 @@ trait ProjectFinanceServiceRoutes {
     response = classOf[ProjectFnResource]
   )
   @ApiImplicitParams(Array(
-    new ApiImplicitParam( name="projectID" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path"),
+   // new ApiImplicitParam( name="projectID" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path"),
     new ApiImplicitParam( name="id" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path"),
     new ApiImplicitParam(required = true, dataType = "org.trackpro.web.ProjectFinanceCreatePayload", paramType = "body")
   ))
@@ -609,7 +609,7 @@ trait MapServiceRoutes {
     response = classOf[ProjectDataResource]
   )
   @ApiImplicitParams(Array(
-    new ApiImplicitParam( name="projectID" , value = "Project's ID", required = true, dataType = "Long", paramType = "path"),
+    //new ApiImplicitParam( name="projectID" , value = "Project's ID", required = true, dataType = "Long", paramType = "path"),
     new ApiImplicitParam( name="id" , value = "Map's ID", required = true, dataType = "Long", paramType = "path"),
     new ApiImplicitParam(required = true, dataType = "org.trackpro.web.MapCreatePayload", paramType = "body")
   ))
@@ -670,7 +670,7 @@ trait MapServiceRoutes {
 
   @ApiOperation(value = "Delete Project Finance", httpMethod = "DELETE")
   @ApiImplicitParams(Array(
-    new ApiImplicitParam( name="projectID" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path"),
+   // new ApiImplicitParam( name="projectID" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path"),
     new ApiImplicitParam( name="id" , value = "Map's ID", required = true, dataType = "Long", paramType = "path")
   ))
   @ApiResponses(Array(
@@ -701,7 +701,7 @@ trait MapServiceRoutes {
     response = classOf[ProjectFnResource]
   )
   @ApiImplicitParams(Array(
-    new ApiImplicitParam( name="projectID" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path"),
+  //  new ApiImplicitParam( name="projectID" , value = "ProjectFn's ID", required = true, dataType = "Long", paramType = "path"),
     new ApiImplicitParam( name="id" , value = "Map's ID", required = true, dataType = "Long", paramType = "path"),
     new ApiImplicitParam(required = true, dataType = "org.trackpro.web.MapCreatePayload", paramType = "body")
   ))
